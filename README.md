@@ -8,16 +8,6 @@
 git clone https://github.com/ChampSim/ChampSim.git
 ```
 
-# Compile
-
-ChampSim takes five parameters: Branch predictor, L1D prefetcher, L2C prefetcher, LLC replacement policy, and the number of cores. 
-For example, `./build_champsim.sh bimodal no no lru 1` builds a single-core processor with bimodal branch predictor, no L1/L2 data prefetchers, and the baseline LRU replacement policy for the LLC.
-```
-$ ./build_champsim.sh bimodal no no no no lru 1
-
-$ ./build_champsim.sh ${BRANCH} ${L1I_PREFETCHER} ${L1D_PREFETCHER} ${L2C_PREFETCHER} ${LLC_PREFETCHER} ${LLC_REPLACEMENT} ${NUM_CORE}
-```
-
 # Download DPC-3 trace
 
 Professor Daniel Jimenez at Texas A&M University kindly provided traces for DPC-3. Use the following script to download these traces (~20GB size and max simpoint only).
@@ -27,112 +17,108 @@ $ cd scripts
 $ ./download_dpc3_traces.sh
 ```
 
-# Run simulation
+# Build & Run simulation
 
-Execute `run_champsim.sh` with proper input arguments. The default `TRACE_DIR` in `run_champsim.sh` is set to `$PWD/dpc3_traces`. <br>
+Following commands are for 2 core partition:
 
-* Single-core simulation: Run simulation with `run_champsim.sh` script.
+• Build:
 
-```
-Usage: ./run_champsim.sh [BINARY] [N_WARM] [N_SIM] [TRACE] [OPTION]
-$ ./run_champsim.sh bimodal-no-no-no-no-lru-1core 1 10 400.perlbench-41B.champsimtrace.xz
+UCP:
+./build_champsim.sh bimodal no no no no ucp 2
 
-${BINARY}: ChampSim binary compiled by "build_champsim.sh" (bimodal-no-no-lru-1core)
-${N_WARM}: number of instructions for warmup (1 million)
-${N_SIM}:  number of instructinos for detailed simulation (10 million)
-${TRACE}: trace name (400.perlbench-41B.champsimtrace.xz)
-${OPTION}: extra option for "-low_bandwidth" (src/main.cc)
-```
-Simulation results will be stored under "results_${N_SIM}M" as a form of "${TRACE}-${BINARY}-${OPTION}.txt".<br> 
+LRU:
+./build_champsim.sh bimodal no no no no lru 2
 
-* Multi-core simulation: Run simulation with `run_4core.sh` script. <br>
-```
-Usage: ./run_4core.sh [BINARY] [N_WARM] [N_SIM] [N_MIX] [TRACE0] [TRACE1] [TRACE2] [TRACE3] [OPTION]
-$ ./run_4core.sh bimodal-no-no-no-lru-4core 1 10 0 400.perlbench-41B.champsimtrace.xz \\
-  401.bzip2-38B.champsimtrace.xz 403.gcc-17B.champsimtrace.xz 410.bwaves-945B.champsimtrace.xz
-```
-Note that we need to specify multiple trace files for `run_4core.sh`. `N_MIX` is used to represent a unique ID for mixed multi-programmed workloads. 
+• Run:
 
+UCP:
+./run_2core.sh bimodal-no-no-no-no-ucp-2core 1 10 trace_core0_name.trace.xz trace_core1_name.trace.xz
 
-# Add your own branch predictor, data prefetchers, and replacement policy
-**Copy an empty template**
-```
-$ cp branch/branch_predictor.cc branch/mybranch.bpred
-$ cp prefetcher/l1d_prefetcher.cc prefetcher/mypref.l1d_pref
-$ cp prefetcher/l2c_prefetcher.cc prefetcher/mypref.l2c_pref
-$ cp prefetcher/llc_prefetcher.cc prefetcher/mypref.llc_pref
-$ cp replacement/llc_replacement.cc replacement/myrepl.llc_repl
-```
+LRU:
+./run_2core.sh bimodal-no-no-no-no-lru-2core 1 10 trace_core0_name.trace.xz trace_core1_name.trace.xz
 
-**Work on your algorithms with your favorite text editor**
-```
-$ vim branch/mybranch.bpred
-$ vim prefetcher/mypref.l1d_pref
-$ vim prefetcher/mypref.l2c_pref
-$ vim prefetcher/mypref.llc_pref
-$ vim replacement/myrepl.llc_repl
-```
-
-**Compile and test**
-```
-$ ./build_champsim.sh mybranch mypref mypref mypref myrepl 1
-$ ./run_champsim.sh mybranch-mypref-mypref-mypref-myrepl-1core 1 10 bzip2_183B
-```
-
-# How to create traces
-
-We have included only 4 sample traces, taken from SPEC CPU 2006. These 
-traces are short (10 million instructions), and do not necessarily cover the range of behaviors your 
-replacement algorithm will likely see in the full competition trace list (not
-included).  We STRONGLY recommend creating your own traces, covering
-a wide variety of program types and behaviors.
-
-The included Pin Tool champsim_tracer.cpp can be used to generate new traces.
-We used Pin 3.2 (pin-3.2-81205-gcc-linux), and it may require 
-installing libdwarf.so, libelf.so, or other libraries, if you do not already 
-have them. Please refer to the Pin documentation (https://software.intel.com/sites/landingpage/pintool/docs/81205/Pin/html/)
-for working with Pin 3.2.
-
-Get this version of Pin:
-```
-wget http://software.intel.com/sites/landingpage/pintool/downloads/pin-3.2-81205-gcc-linux.tar.gz
-```
-
-**Note on compatibility**: If you are using newer linux kernels/Ubuntu versions (eg. 20.04LTS), you might run into issues (such as [[1](https://github.com/ChampSim/ChampSim/issues/102)],[[2](https://stackoverflow.com/questions/55698095/intel-pin-tools-32-bit-processsectionheaders-560-assertion-failed)],[[3](https://stackoverflow.com/questions/43589174/pin-tool-segmentation-fault-for-ubuntu-17-04)]) with the PIN3.2. ChampSim tracer works fine with newer PIN tool versions that can be downloaded from [here](https://software.intel.com/content/www/us/en/develop/articles/pin-a-binary-instrumentation-tool-downloads.html). PIN3.17 is [confirmed](https://github.com/ChampSim/ChampSim/issues/102) to work with Ubuntu 20.04.1 LTS.
-
-Once downloaded, open tracer/make_tracer.sh and change PIN_ROOT to Pin's location.
-Run ./make_tracer.sh to generate champsim_tracer.so.
-
-**Use the Pin tool like this**
-```
-pin -t obj-intel64/champsim_tracer.so -- <your program here>
-```
-
-The tracer has three options you can set:
-```
--o
-Specify the output file for your trace.
-The default is default_trace.champsim
-
--s <number>
-Specify the number of instructions to skip in the program before tracing begins.
-The default value is 0.
-
--t <number>
-The number of instructions to trace, after -s instructions have been skipped.
-The default value is 1,000,000.
-```
-For example, you could trace 200,000 instructions of the program ls, after
-skipping the first 100,000 instructions, with this command:
-```
-pin -t obj/champsim_tracer.so -o traces/ls_trace.champsim -s 100000 -t 200000 -- ls
-```
-Traces created with the champsim_tracer.so are approximately 64 bytes per instruction,
-but they generally compress down to less than a byte per instruction using xz compression.
 
 # Evaluate Simulation
 
 ChampSim measures the IPC (Instruction Per Cycle) value as a performance metric. <br>
 There are some other useful metrics printed out at the end of simulation. <br>
 
-Good luck and be a champion! <br>
+# UCP
+
+Utility Cache Partitioning:
+• UCP divides the cache among the cores based on the algorithm which decides the division of ways based on utility.
+• It has utility monitoring circuits (UMON) which have an auxiliary tag directory (ATD) which keeps count of hit rates.
+• Based on the various values of UMON for different possible combinations of way partitions it chooses the optimum partition where in hit rate is maximum or miss rate is minimum.
+• ATD is also just like a cache which uses LRU policy to calculate the division of cache partitioning.
+• Each ATD contains blocks of their corresponding cores & possible partitions are applied based on same.
+• The number of possible cache partitions increases exponentially and maintaining tag directories and hit counters for each may cause overhead.
+• UMON Global which applies uniform partitioning on all sets is possible option.
+• Here we have implemented Dynamic Set Sampling (DSS) for UMON which takes sampled sets (64) and applies the partitioning on them and then the result is applied to the follower sets.
+• Taking only 64 sets for sampling reduces the overhead and also gives the required result.
+
+# Implementation
+
+New files created or modified:
+• ucp.llc_repl
+• llc_find_victim
+• atd.h
+• cache.cc
+
+The base replacement policy is LRU which has been further modified to implement the UCP algorithm.
+
+1. Created a new file in the replacement folder: ucp.llc_repl
+The file has following functions:
+• llc_ find_victim
+• find_victim
+• llc_update_replacement_state
+• llc_initialize_replacement
+
+2. Created a new include file to implement ATD: atd.h
+The file has following properties:
+• It contains two classes namely class blockatd & class ATD.
+• class blockatd contains valid bit, tag bit, lru bit.
+• class ATD contains 2D array of blockatd & an array to maintain the umon global counter.
+
+3. Made changes in cache.cc to implement the UCP policy:
+The following functions were added:
+• void atd_insert
+• int atdupdate
+• void atdfill
+• void partition
+
+Created two new atds for implementing dual core partition. The above-mentioned functions were further used to apply the UCP partition.
+
+atd_insert:
+• It inserts new block in the atd and checks if there is any available empty space in atd.
+• If no empty space, then the it evicts the block which has maximum lru and then the lru value of new inserted block is 0.
+
+atdupdate:
+• It checks on which block there is a hit that is tells the block and way of the hit block.
+• It then updates the lru of that block to 0 and increments the lru of remaining blocks’ lru values by 1.
+• Also returns the hit value which is the block number.
+
+atdfill:
+• It checks whether the block coming into the atd is a hit or miss.
+• If it’s a hit then the umonglobal is updated & lru is incremented.
+• Fills the ATD according to the hits and misses encountered.
+
+void partition:
+• This algorithm tries out all possible combinations of the 16 ways and returns the best optimal partition.
+• It tells the optimal one by checking the utilities of the combinations.
+• As per the UCP research paper the same one is implemented.
+
+Sampled Sets:
+• Each 64th set is used as a sampled set. Calculated by taking modulus of set number with 64 and equating the same to zero.
+• ATD takes these sets and finds the optimal partition using UCP and then the result is applied on follower sets.
+• With every 2.5 mil cycles the partition changes as per the output of our policy.
+
+How the partition changes?
+• After every 2.5 million cycles the partitioning algorithm is called & dynamically it gets updated.
+• The umon counters for each ATD are halved after every call of partition.
+• We have implemented our code for 2 core partition.
+• We have implemented the ATD and even done the same for static partition.
+
+How to run the code?
+For N core partition run_Ncore.sh is a file which needs to be created to be able to run the code.
+We have attached the files for 2 cores and 4 cores.
+Also, when we are running LRU we have to first comment out the lines where in ucp variables are declared.
