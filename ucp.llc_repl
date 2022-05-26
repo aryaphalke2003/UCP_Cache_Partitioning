@@ -1,0 +1,158 @@
+// G9: code cells containing _func_ (DP function calls)were removed as they are just printing some log files.
+// G9: UCP replacement policy is mainly derived from the basic LRU policy which was earlier used in LLC replacement
+#include "cache.h"
+#include <bits/stdc++.h>
+#include <atd.h>
+int cur1 = 0, cur2 = 0; // G9: variables to count current ways in a set for each Core
+int ucp1, ucp2;         // G9: variables representing the required ways for utility partitioning
+
+uint32_t CACHE::llc_find_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const BLOCK *current_set, uint64_t ip, uint64_t full_addr, uint32_t type)
+{
+    uint32_t way = 0;
+
+    // fill invalid line first
+    for (way = 0; way < LLC_WAY; way++)
+    {
+        if (block[set][way].valid == false)
+        {
+            break;
+        }
+    }
+
+    // LRU victim
+    for (int i = 0; i < LLC_WAY; i++) // G9: counting the current ways allocated to each Core in a set
+    {
+        if (block[set][i].cpu == 0)
+        {
+
+            cur1++;
+        }
+        else
+        {
+
+            cur2++;
+        }
+    }
+
+    int max1 = 0, index1 = 0, max2 = 0, index2 = 0; // G9: variables representing maximum lru for the blocks of Core 1 and 2
+
+    if (way == LLC_WAY)
+    {
+
+        for (way = 0; way < LLC_WAY; way++)
+        {
+            if (block[set][way].cpu == 0)
+            {
+                if (block[set][way].lru > max1)
+                {
+                    max1 = block[set][way].lru;
+                    index1 = way;
+                }
+            }
+            else
+            {
+                if (block[set][way].lru > max2)
+                {
+                    max2 = block[set][way].lru;
+                    index2 = way;
+                }
+            }
+        }
+        for (way = 0; way < LLC_WAY; way++)
+        {
+            if (cpu == 0) // G9: If the upcoming block is from Cpu0
+            {
+                if (cur1 < ucp1) // G9: when the current ways to Cpu 0 are less than that required for utility partitioning
+                {
+                    if (block[set][way].lru == max2)
+                    {
+                        cur1++;
+                        cur2--;
+                        break;
+                    }
+                }
+                else if (cur1 >= ucp1) // G9: when the current ways to cpu 0 are greater than that required for utility partitioning
+                {
+                    if (block[set][way].lru == max1)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (cur2 < ucp2)
+                {
+                    if (block[set][way].lru == max1)
+                    {
+                        cur2++;
+                        cur1--;
+                        break;
+                    }
+                }
+                else if (cur2 >= ucp2)
+                {
+                    if (block[set][way].lru == max2)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (way == LLC_WAY)
+    {
+        // cerr << "[" << NAME << "] " << _func_ << " no victim! set: " << set << endl;
+        assert(0);
+    }
+
+    return way;
+}
+
+void CACHE::llc_update_replacement_state(uint32_t cpu, uint32_t set, uint32_t way, uint64_t full_addr, uint64_t ip, uint64_t victim_addr, uint32_t type, uint8_t hit)
+{
+    string TYPE_NAME;
+    if (type == LOAD)
+        TYPE_NAME = "LOAD";
+    else if (type == RFO)
+        TYPE_NAME = "RFO";
+    else if (type == PREFETCH)
+        TYPE_NAME = "PF";
+    else if (type == WRITEBACK)
+        TYPE_NAME = "WB";
+    else
+        assert(0);
+
+    if (hit)
+        TYPE_NAME += "_HIT";
+    else
+        TYPE_NAME += "_MISS";
+
+    if ((type == WRITEBACK) && ip)
+        assert(0);
+
+    // uncomment this line to see the LLC accesses
+    // cout << "CPU: " << cpu << "  LLC " << setw(9) << TYPE_NAME << " set: " << setw(5) << set << " way: " << setw(2) << way;
+    // cout << hex << " paddr: " << setw(12) << paddr << " ip: " << setw(8) << ip << " victim_addr: " << victim_addr << dec << endl;
+
+    if (hit) // G9: updating blocks lru after victim is found
+    {
+        for (uint32_t i = 0; i < LLC_WAY; i++)
+        {
+            if (block[set][i].lru < block[set][way].lru)
+            {
+                block[set][i].lru++;
+            }
+        }
+        block[set][way].lru = 0;
+    }
+}
+
+void CACHE::llc_initialize_replacement()
+{
+}
+
+void CACHE::llc_replacement_final_stats()
+{
+}
