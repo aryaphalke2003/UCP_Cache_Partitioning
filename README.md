@@ -17,26 +17,26 @@ $ cd scripts
 $ ./download_dpc3_traces.sh
 ```
 
-# Build & Run simulation
-
-Following commands are for 2 core partition:
-
-• Build:
+# Build 2 core
 
 UCP:
-./build_champsim.sh bimodal no no no no ucp 2
-
+```
+$ ./build_champsim.sh bimodal no no no no ucp 2
+```
 LRU:
-./build_champsim.sh bimodal no no no no lru 2
-
-• Run:
+```
+$ ./build_champsim.sh bimodal no no no no lru 2
+```
+# Run 2 core
 
 UCP:
-./run_2core.sh bimodal-no-no-no-no-ucp-2core 1 10 trace_core0_name.trace.xz trace_core1_name.trace.xz
-
+```
+$ ./run_2core.sh bimodal-no-no-no-no-ucp-2core 1 10 trace_core0_name.trace.xz trace_core1_name.trace.xz
+```
 LRU:
-./run_2core.sh bimodal-no-no-no-no-lru-2core 1 10 trace_core0_name.trace.xz trace_core1_name.trace.xz
-
+```
+$ ./run_2core.sh bimodal-no-no-no-no-lru-2core 1 10 trace_core0_name.trace.xz trace_core1_name.trace.xz
+```
 
 # Evaluate Simulation
 
