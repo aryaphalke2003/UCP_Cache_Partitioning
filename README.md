@@ -1,5 +1,7 @@
 # UCP_Cache_Partitioning
 
+#Team:Shyam (2020CSB1110), Arya (2020CSB1107), Sushil (2020CSB1132)  
+
 • UCP divides the cache among the cores based on the algorithm which decides the division of ways based on utility.
 • It has utility monitoring circuits (UMON) which have an auxiliary tag directory (ATD) which keeps count of hit rates.
 • Based on the various values of UMON for different possible combinations of way partitions it chooses the optimum partition where in hit rate is maximum or miss rate is minimum.
